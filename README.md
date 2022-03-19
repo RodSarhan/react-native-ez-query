@@ -7,6 +7,9 @@ React Native EZ Query helps adding stateful logic to your api calls such as load
 ```sh
 npm install react-native-ez-query
 ```
+```sh
+yarn add react-native-ez-query
+```
 
 ## Usage
 
