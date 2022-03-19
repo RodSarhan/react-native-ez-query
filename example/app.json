@@ -1,0 +1,22 @@
+{
+  "name": "react-native-ez-query-example",
+  "displayName": "EzQuery Example",
+  "expo": {
+    "name": "react-native-ez-query-example",
+    "slug": "react-native-ez-query-example",
+    "description": "Example app for react-native-ez-query",
+    "privacy": "public",
+    "version": "1.0.0",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ]
+  }
+}
