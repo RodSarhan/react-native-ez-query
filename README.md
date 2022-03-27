@@ -97,7 +97,7 @@ getMultpleApis.fetchMultiple({
         onError:(error)=>{}, //the error it recieves will be the error of the first fetch that fails, but we can handle it or 
                             //do whatever we want
 
-        //also includes the same props as useApi
+        //also includes the same props as useEzQuery
 });
 ```
 Best usage is to create a custom hook that uses many api hooks and returns them all under one object like useStuffFetcher which includes some related apis, we can use the resulting hook inside any component or hook to have access to those functions and states
