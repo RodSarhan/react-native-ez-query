@@ -91,8 +91,13 @@ export const useMultipleQueries = () => {
         let combinedResponse: TCombinedResponse = {};
         Promise.all(
           names.map(async (name) => {
-            let response = await callbacks[name]();
-            combinedResponse[name] = response;
+            let onSuccessCallback = callbacks[name].onSuccess ?? (() => {});
+            let response = await callbacks[name].callback();
+            if (callbacks[name].onSuccess) {
+              combinedResponse[name] = onSuccessCallback(response);
+            } else {
+              combinedResponse[name] = response;
+            }
           })
         )
           .then(() => {
