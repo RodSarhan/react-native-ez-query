@@ -1,11 +1,18 @@
 export type TFetchParams = {
-  key?: string;
+  key: string;
   onError?: (error: any) => void;
   onSuccess?: (data: any) => void;
-  showErrorAlert?: boolean;
-  enableErrorSubmission?: boolean;
-  onSubmitError?: (data: any) => void;
-  isOneOfMultiple?: boolean;
+  // showErrorAlert?: boolean;
+  // enableErrorSubmission?: boolean;
+  // onSubmitError?: (data: any) => void;
+  // isOneOfMultiple?: boolean;
+};
+
+export type TNoQueryFetchParams = {
+  key: string;
+  asyncFunction: (...args: any) => Promise<any>;
+  onSuccess?: (data: any) => void;
+  onError?: (error: any) => void;
 };
 
 export type TCombinedResponse = {

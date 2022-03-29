@@ -1,39 +1,35 @@
 /* eslint-disable no-shadow */
 /* eslint-disable no-catch-shadow */
 import { useRef, useState } from 'react';
-// import { Alert } from 'react-native';
-import type { TCombinedResponse, TUseFetchMultipleParams } from './types';
 
-export const useMultipleQueries = () => {
-  const abortControllers = useRef<Record<string, AbortController>>({
-    // eslint-disable-next-line no-undef
-    default: new AbortController(),
-  });
-  const abortReasons = useRef<Record<string, string | undefined>>({
-    default: undefined,
-  });
-  const [loading, setLoading] = useState<Record<string, boolean>>({
-    default: false,
-  });
-  const loadingRef = useRef<Record<string, boolean>>({ default: false });
-  const [success, setSuccess] = useState<Record<string, boolean>>({
-    default: false,
-  });
-  const successRef = useRef<Record<string, boolean>>({ default: false });
-  const [error, setError] = useState<Record<string, boolean>>({
-    default: false,
-  });
-  const errorRef = useRef<Record<string, boolean>>({ default: false });
+type TFetchParams = {
+  key: string;
+  asyncFunction: (...args: any) => Promise<any>;
+  onSuccess?: (data: any) => void;
+  onError?: (error: any) => void;
+};
 
-  const isLoading = (key: string = 'default') => {
+export const useFetcher = () => {
+  const abortControllers = useRef<Record<string, AbortController>>({});
+  const abortReasons = useRef<Record<string, string | undefined>>({});
+
+  const [loading, setLoading] = useState<Record<string, boolean>>({});
+  const [success, setSuccess] = useState<Record<string, boolean>>({});
+  const [error, setError] = useState<Record<string, boolean>>({});
+
+  const loadingRef = useRef<Record<string, boolean>>({});
+  const successRef = useRef<Record<string, boolean>>({});
+  const errorRef = useRef<Record<string, boolean>>({});
+
+  const isLoading = (key: string) => {
     return loading[key];
   };
 
-  const isSuccess = (key: string = 'default') => {
+  const isSuccess = (key: string) => {
     return success[key];
   };
 
-  const isError = (key: string = 'default') => {
+  const isError = (key: string) => {
     return error[key];
   };
 
@@ -51,25 +47,19 @@ export const useMultipleQueries = () => {
     successRef.current = { ...successRef.current, [key]: value };
     setSuccess(successRef.current);
   };
-  const abortRequest = (
-    reason: 'refreshed' | 'canceled',
-    key: string = 'default'
-  ) => {
+  const abortRequest = (reason: 'refreshed' | 'canceled', key: string) => {
     abortControllers.current[key].abort();
     abortReasons.current[key] = reason;
     // eslint-disable-next-line no-undef
     abortControllers.current[key] = new AbortController();
   };
 
-  const fetchMultiple = async ({
-    callbacks,
-    // showErrorAlert = true,
-    // enableErrorSubmission,
-    // onSubmitError = () => {},
+  const fetch = async ({
+    key,
+    asyncFunction,
     onError,
     onSuccess,
-    key = 'default',
-  }: TUseFetchMultipleParams) => {
+  }: TFetchParams) => {
     if (isLoading(key)) {
       abortRequest('refreshed', key);
     } else {
@@ -87,18 +77,12 @@ export const useMultipleQueries = () => {
             reason: abortReasons.current[key],
           });
         }
-        const names = Object.keys(callbacks);
-        let combinedResponse: TCombinedResponse = {};
-        Promise.all(
-          names.map(async (name) => {
-            let response = await callbacks[name]();
-            combinedResponse[name] = response;
+
+        asyncFunction()
+          .then((response: any) => {
+            resolve(response);
           })
-        )
-          .then(() => {
-            resolve(combinedResponse);
-          })
-          .catch((error) => {
+          .catch((error: any) => {
             reject(error);
           });
         //@ts-ignore
@@ -138,33 +122,16 @@ export const useMultipleQueries = () => {
         setIsError(key, true);
         if (onError) {
           onError(error);
+        } else {
+          throw error;
         }
-        // else if (showErrorAlert) {
-        //   Alert.alert(
-        //     'Encountered an error',
-        //     error.message,
-        //     enableErrorSubmission
-        //       ? [
-        //           {
-        //             text: 'Submit Error',
-        //             onPress: () => onSubmitError(error),
-        //           },
-        //           {
-        //             text: 'Close',
-        //             onPress: () => {},
-        //             style: 'cancel',
-        //           },
-        //         ]
-        //       : undefined
-        //   );
-        // }
       }
     }
   };
 
   return {
-    fetchMultiple,
-    cancel: (key?: string) => abortRequest('canceled', key),
+    fetch,
+    cancel: (key: string) => abortRequest('canceled', key),
     isLoading,
     isSuccess,
     isError,
