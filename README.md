@@ -23,13 +23,21 @@ yarn add react-native-ez-query
 This hook takes any async function callback as an argument and returns and object that contains the following
 
 1. fetch - takes an object that includes the parameters for the api fetch function, alongside other customizations that are mentioned below.
+
 <br>
+
 2. cancel - invoking this function cancels the ongoing async function.
+
 <br>
+
 3. isLoading - a function that return a boolean for loading states.
+
 <br>
+
 4. isError - a function that returns true if the last request was an error
+
 <br>
+
 5. isSuccess - a function that returns true if the last request was an error
 
 ---
