@@ -1,13 +1,13 @@
 /* eslint-disable no-shadow */
 /* eslint-disable no-catch-shadow */
 import { useRef, useState } from 'react';
-
-type TFetchParams = {
-  key: string;
-  asyncFunction: (...args: any) => Promise<any>;
-  onSuccess?: (data: any) => void;
-  onError?: (error: any) => void;
-};
+import { Alert } from 'react-native';
+import type {
+  TCombinedResponse,
+  TFetchParams,
+  TUseFetchMultipleParams,
+} from './types';
+// import { Alert } from 'react-native';
 
 export const useFetcher = () => {
   const abortControllers = useRef<Record<string, AbortController>>({});
@@ -20,18 +20,6 @@ export const useFetcher = () => {
   const loadingRef = useRef<Record<string, boolean>>({});
   const successRef = useRef<Record<string, boolean>>({});
   const errorRef = useRef<Record<string, boolean>>({});
-
-  const isLoading = (key: string) => {
-    return loading[key];
-  };
-
-  const isSuccess = (key: string) => {
-    return success[key];
-  };
-
-  const isError = (key: string) => {
-    return error[key];
-  };
 
   const setIsLoading = (key: string, value: boolean) => {
     loadingRef.current = { ...loadingRef.current, [key]: value };
@@ -47,7 +35,7 @@ export const useFetcher = () => {
     successRef.current = { ...successRef.current, [key]: value };
     setSuccess(successRef.current);
   };
-  const abortRequest = (reason: 'refreshed' | 'canceled', key: string) => {
+  const abortRequest = (reason: 'duplicate' | 'canceled', key: string) => {
     abortControllers.current[key].abort();
     abortReasons.current[key] = reason;
     // eslint-disable-next-line no-undef
@@ -55,13 +43,113 @@ export const useFetcher = () => {
   };
 
   const fetch = async ({
-    key,
-    asyncFunction,
+    key = 'default',
+    callback,
     onError,
     onSuccess,
+    onSubmitError,
+    onCancel,
   }: TFetchParams) => {
-    if (isLoading(key)) {
-      abortRequest('refreshed', key);
+    if (loading[key]) {
+      abortRequest('duplicate', key);
+    } else {
+      // eslint-disable-next-line no-undef
+      abortControllers.current[key] = new AbortController();
+    }
+    setIsLoading(key, true);
+    setIsSuccess(key, false);
+    setIsError(key, false);
+    const func = async () => {
+      return new Promise((resolve, reject) => {
+        if (abortControllers.current[key].signal.aborted) {
+          reject({
+            message: 'canceled',
+            reason: abortReasons.current[key],
+          });
+        }
+
+        callback()
+          .then((response) => {
+            resolve(response);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+
+        //@ts-ignore
+        abortControllers.current[key].signal.addEventListener('abort', () => {
+          reject({
+            message: 'canceled',
+            reason: abortReasons.current[key],
+          });
+        });
+      });
+    };
+    try {
+      try {
+        const response = await func();
+        if (response) {
+          setIsLoading(key, false);
+          setIsSuccess(key, true);
+          setIsError(key, false);
+          if (onSuccess) {
+            return onSuccess(response);
+          } else {
+            return response;
+          }
+        }
+      } catch (error) {
+        throw error;
+      }
+    } catch (error: any) {
+      if (abortReasons.current[key] === 'duplicate') {
+        abortReasons.current[key] = undefined;
+      } else if (abortReasons.current[key] === 'canceled') {
+        setIsLoading(key, false);
+        abortReasons.current[key] = undefined;
+        if (onCancel) {
+          onCancel();
+        }
+      } else {
+        setIsLoading(key, false);
+        setIsSuccess(key, false);
+        setIsError(key, true);
+        if (onError === 'throw') {
+          throw error;
+        }
+        if (onError === 'alert' || onError === 'alert-submit') {
+          Alert.alert(
+            'Encountered an error',
+            error.message,
+            onError === 'alert-submit'
+              ? [
+                  {
+                    text: 'Submit Error',
+                    onPress: () => {
+                      onSubmitError ? onSubmitError(error) : () => {};
+                    },
+                  },
+                  { text: 'Close', onPress: () => {}, style: 'cancel' },
+                ]
+              : undefined
+          );
+        } else if (onError) {
+          onError(error);
+        }
+      }
+    }
+  };
+
+  const fetchMultiple = async ({
+    key = 'default',
+    callbacks,
+    onError,
+    onSuccess,
+    onSubmitError,
+    onCancel,
+  }: TUseFetchMultipleParams) => {
+    if (loading[key]) {
+      abortRequest('duplicate', key);
     } else {
       // eslint-disable-next-line no-undef
       abortControllers.current[key] = new AbortController();
@@ -77,12 +165,18 @@ export const useFetcher = () => {
             reason: abortReasons.current[key],
           });
         }
-
-        asyncFunction()
-          .then((response: any) => {
-            resolve(response);
+        let combinedResponse: TCombinedResponse = {};
+        const allCallbacks = Object.values(callbacks);
+        Promise.all(
+          allCallbacks.map(async (callback) => {
+            let response = await callback.callback();
+            combinedResponse[callback.name] = response;
           })
-          .catch((error: any) => {
+        )
+          .then(() => {
+            resolve(combinedResponse);
+          })
+          .catch((error) => {
             reject(error);
           });
         //@ts-ignore
@@ -111,19 +205,39 @@ export const useFetcher = () => {
         throw error;
       }
     } catch (error: any) {
-      if (abortReasons.current[key] === 'refreshed') {
+      if (abortReasons.current[key] === 'duplicate') {
         abortReasons.current[key] = undefined;
       } else if (abortReasons.current[key] === 'canceled') {
         setIsLoading(key, false);
         abortReasons.current[key] = undefined;
+        if (onCancel) {
+          onCancel();
+        }
       } else {
         setIsLoading(key, false);
         setIsSuccess(key, false);
         setIsError(key, true);
-        if (onError) {
-          onError(error);
-        } else {
+        if (onError === 'throw') {
           throw error;
+        }
+        if (onError === 'alert' || onError === 'alert-submit') {
+          Alert.alert(
+            'Encountered an error',
+            error.message,
+            onError === 'alert-submit'
+              ? [
+                  {
+                    text: 'Submit Error',
+                    onPress: () => {
+                      onSubmitError ? onSubmitError(error) : () => {};
+                    },
+                  },
+                  { text: 'Close', onPress: () => {}, style: 'cancel' },
+                ]
+              : undefined
+          );
+        } else if (onError) {
+          onError(error);
         }
       }
     }
@@ -131,9 +245,10 @@ export const useFetcher = () => {
 
   return {
     fetch,
-    cancel: (key: string) => abortRequest('canceled', key),
-    isLoading,
-    isSuccess,
-    isError,
+    fetchMultiple,
+    cancel: (key: string = 'default') => abortRequest('canceled', key),
+    isLoading: (key: string = 'default') => loading[key],
+    isSuccess: (key: string = 'default') => success[key],
+    isError: (key: string = 'default') => error[key],
   };
 };

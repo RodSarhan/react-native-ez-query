@@ -1,14 +1,30 @@
 /* eslint-disable no-shadow */
 /* eslint-disable no-catch-shadow */
 import { useRef, useState } from 'react';
+import { Alert } from 'react-native';
 // import { Alert } from 'react-native';
-import type {
-  TCombinedResponse,
-  TFetchParams,
-  TUseFetchMultipleParams,
-} from './types';
 
-export const useEzQuery = () => {
+export const useEzQuery = <T extends any[]>(
+  callback: (...args: T) => Promise<any>
+) => {
+  type TStartParams =
+    | {
+        key?: string;
+        functionParams: T;
+        onError?: ((error: any) => void) | 'alert' | 'throw';
+        onSuccess?: (data: any) => any;
+        onCancel?: () => void;
+        onSubmitError: undefined;
+      }
+    | {
+        key?: string;
+        functionParams: T;
+        onError: 'alert-submit';
+        onSuccess?: (data: any) => any;
+        onCancel?: (...args: any) => void;
+        onSubmitError: (data: any) => void;
+      };
+
   const abortControllers = useRef<Record<string, AbortController>>({});
   const abortReasons = useRef<Record<string, string | undefined>>({});
 
@@ -34,24 +50,23 @@ export const useEzQuery = () => {
     successRef.current = { ...successRef.current, [key]: value };
     setSuccess(successRef.current);
   };
-  const abortRequest = (reason: 'refreshed' | 'canceled', key: string) => {
+  const abortRequest = (reason: 'duplicate' | 'canceled', key: string) => {
     abortControllers.current[key].abort();
     abortReasons.current[key] = reason;
     // eslint-disable-next-line no-undef
     abortControllers.current[key] = new AbortController();
   };
 
-  const fetch = async ({
-    key,
-    callback,
-    // showErrorAlert = true,
-    // enableErrorSubmission,
-    // onSubmitError = () => {},
+  const start = async ({
+    key = 'default',
+    functionParams,
     onError,
     onSuccess,
-  }: TFetchParams) => {
+    onSubmitError,
+    onCancel,
+  }: TStartParams) => {
     if (loading[key]) {
-      abortRequest('refreshed', key);
+      abortRequest('duplicate', key);
     } else {
       // eslint-disable-next-line no-undef
       abortControllers.current[key] = new AbortController();
@@ -59,7 +74,7 @@ export const useEzQuery = () => {
     setIsLoading(key, true);
     setIsSuccess(key, false);
     setIsError(key, false);
-    const func = () => {
+    const func = async () => {
       return new Promise((resolve, reject) => {
         if (abortControllers.current[key].signal.aborted) {
           reject({
@@ -68,7 +83,7 @@ export const useEzQuery = () => {
           });
         }
 
-        callback()
+        callback(...functionParams)
           .then((response) => {
             resolve(response);
           })
@@ -102,149 +117,49 @@ export const useEzQuery = () => {
         throw error;
       }
     } catch (error: any) {
-      if (abortReasons.current[key] === 'refreshed') {
+      if (abortReasons.current[key] === 'duplicate') {
         abortReasons.current[key] = undefined;
       } else if (abortReasons.current[key] === 'canceled') {
         setIsLoading(key, false);
         abortReasons.current[key] = undefined;
+        if (onCancel) {
+          onCancel();
+        }
       } else {
         setIsLoading(key, false);
         setIsSuccess(key, false);
         setIsError(key, true);
-        if (onError) {
+        if (onError === 'throw') {
+          throw error;
+        }
+        if (onError === 'alert' || onError === 'alert-submit') {
+          Alert.alert(
+            'Encountered an error',
+            error.message,
+            onError === 'alert-submit'
+              ? [
+                  {
+                    text: 'Submit Error',
+                    onPress: () => {
+                      onSubmitError ? onSubmitError(error) : () => {};
+                    },
+                  },
+                  { text: 'Close', onPress: () => {}, style: 'cancel' },
+                ]
+              : undefined
+          );
+        } else if (onError) {
           onError(error);
         }
-        // else if (showErrorAlert) {
-        //   Alert.alert(
-        //     'Encountered an error',
-        //     error.message,
-        //     enableErrorSubmission
-        //       ? [
-        //           {
-        //             text: 'Submit Error',
-        //             onPress: () => onSubmitError(error),
-        //           },
-        //           { text: 'Close', onPress: () => {}, style: 'cancel' },
-        //         ]
-        //       : undefined
-        //   );
-        // }
-      }
-    }
-  };
-
-  const fetchMultiple = async ({
-    callbacks,
-    // showErrorAlert = true,
-    // enableErrorSubmission,
-    // onSubmitError = () => {},
-    onError,
-    onSuccess,
-    key = 'default',
-  }: TUseFetchMultipleParams) => {
-    if (loading[key]) {
-      abortRequest('refreshed', key);
-    } else {
-      // eslint-disable-next-line no-undef
-      abortControllers.current[key] = new AbortController();
-    }
-    setIsLoading(key, true);
-    setIsSuccess(key, false);
-    setIsError(key, false);
-    const func = () => {
-      return new Promise((resolve, reject) => {
-        if (abortControllers.current[key].signal.aborted) {
-          reject({
-            message: 'canceled',
-            reason: abortReasons.current[key],
-          });
-        }
-        const names = Object.keys(callbacks);
-        let combinedResponse: TCombinedResponse = {};
-        Promise.all(
-          names.map(async (name) => {
-            let onSuccessCallback = callbacks[name].onSuccess ?? (() => {});
-            let response = await callbacks[name].callback();
-            if (callbacks[name].onSuccess) {
-              combinedResponse[name] = onSuccessCallback(response);
-            } else {
-              combinedResponse[name] = response;
-            }
-          })
-        )
-          .then(() => {
-            resolve(combinedResponse);
-          })
-          .catch((error) => {
-            reject(error);
-          });
-        //@ts-ignore
-        abortControllers.current[key].signal.addEventListener('abort', () => {
-          reject({
-            message: 'canceled',
-            reason: abortReasons.current[key],
-          });
-        });
-      });
-    };
-    try {
-      try {
-        const response = await func();
-        if (response) {
-          setIsLoading(key, false);
-          setIsSuccess(key, true);
-          setIsError(key, false);
-          if (onSuccess) {
-            return onSuccess(response);
-          } else {
-            return response;
-          }
-        }
-      } catch (error) {
-        throw error;
-      }
-    } catch (error: any) {
-      if (abortReasons.current[key] === 'refreshed') {
-        abortReasons.current[key] = undefined;
-      } else if (abortReasons.current[key] === 'canceled') {
-        setIsLoading(key, false);
-        abortReasons.current[key] = undefined;
-      } else {
-        setIsLoading(key, false);
-        setIsSuccess(key, false);
-        setIsError(key, true);
-        if (onError) {
-          onError(error);
-        }
-        // else if (showErrorAlert) {
-        //   Alert.alert(
-        //     'Encountered an error',
-        //     error.message,
-        //     enableErrorSubmission
-        //       ? [
-        //           {
-        //             text: 'Submit Error',
-        //             onPress: () => onSubmitError(error),
-        //           },
-        //           {
-        //             text: 'Close',
-        //             onPress: () => {},
-        //             style: 'cancel',
-        //           },
-        //         ]
-        //       : undefined
-        //   );
-        // }
       }
     }
   };
 
   return {
-    fetch,
-    fetchMultiple,
-    cancel: (key: string) => abortRequest('canceled', key),
-    isLoading: (key: string) => loading[key],
-    isSuccess: (key: string) => success[key],
-    isError: (key: string) => error[key],
+    start,
+    cancel: (key: string = 'default') => abortRequest('canceled', key),
+    isLoading: (key: string = 'default') => loading[key],
+    isSuccess: (key: string = 'default') => success[key],
+    isError: (key: string = 'default') => error[key],
   };
 };
