@@ -22,7 +22,7 @@ yarn add react-native-ez-query
 
 This hook takes any async function callback as an argument and returns and object that contains the following
 
-1. fetch - takes an object that includes the parameters for the api fetch function, alongside other customizations that are mentioned below.
+1. start - takes an object that includes the parameters for the api fetch function, alongside other customizations that are mentioned below such as: onError, onSuccess, etc.
 
 <br>
 
@@ -61,7 +61,7 @@ Now inside our component or custom hook we can do the following
 ######Note: all of those are optional excpet functionParams
 
 ```javascript
-const something = await getSomething.fetch(
+const something = await getSomething.start(
     {
         key:"byMonth" //this prop is not required, it's safer if provided as it allows to use the same query with different params
                         // without sharing the state (or cancelations) between diffrent fetches that use the same async function
