@@ -58,7 +58,7 @@ const getSomething = useEzQuery(postRequestFetchSomething);
 
 Now inside our component or custom hook we can do the following
 
-######Note: all of those are optional excpet functionParams
+###### Note: all of those are optional excpet functionParams
 
 ```javascript
 const something = await getSomething.start(
