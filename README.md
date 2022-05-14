@@ -76,6 +76,7 @@ const something = await getSomething.start(
 
         onSubmitError:(error)=>{doSomething(error)} //only accessible and required if onError is set to "alert-submit"
 
+        cancelOngoing: boolean //defaults to true which will cancel the most recent request that has the same key before starting the next one
      })
 ```
 

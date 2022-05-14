@@ -49,8 +49,9 @@ export const useFetcher = () => {
     onSuccess,
     onSubmitError,
     onCancel,
+    cancelOngoing = true,
   }: TFetchParams) => {
-    if (loading[key]) {
+    if (loading[key] && cancelOngoing) {
       abortRequest('duplicate', key);
     } else {
       // eslint-disable-next-line no-undef

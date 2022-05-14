@@ -2,6 +2,26 @@ export type TCombinedResponse = {
   [key: string]: any;
 };
 
+export type TStartParams<T> =
+  | {
+      key?: string;
+      functionParams: T;
+      onError?: ((error: any) => void) | 'alert' | 'throw';
+      onSuccess?: (data: any) => any;
+      onCancel?: () => void;
+      onSubmitError: undefined;
+      cancelOngoing?: boolean;
+    }
+  | {
+      key?: string;
+      functionParams: T;
+      onError: 'alert-submit';
+      onSuccess?: (data: any) => any;
+      onCancel?: (...args: any) => void;
+      onSubmitError: (data: any) => void;
+      cancelOngoing?: boolean;
+    };
+
 export type TFetchParams =
   | {
       key: string;
@@ -10,6 +30,7 @@ export type TFetchParams =
       onSuccess?: (data: any) => any;
       onCancel?: () => void;
       onSubmitError: undefined;
+      cancelOngoing?: boolean;
     }
   | {
       key: string;
@@ -18,6 +39,7 @@ export type TFetchParams =
       onSuccess?: (data: any) => any;
       onCancel?: (...args: any) => void;
       onSubmitError: (data: any) => void;
+      cancelOngoing?: boolean;
     };
 
 export type TUseFetchMultipleParams =

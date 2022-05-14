@@ -2,29 +2,12 @@
 /* eslint-disable no-catch-shadow */
 import { useRef, useState } from 'react';
 import { Alert } from 'react-native';
+import type { TStartParams } from './types';
 // import { Alert } from 'react-native';
 
-export const useEzQuery = <T extends any[]>(
-  callback: (...args: T) => Promise<any>
+export const useEzQuery = <ArgsType extends any[]>(
+  callback: (...args: ArgsType) => Promise<any>
 ) => {
-  type TStartParams =
-    | {
-        key?: string;
-        functionParams: T;
-        onError?: ((error: any) => void) | 'alert' | 'throw';
-        onSuccess?: (data: any) => any;
-        onCancel?: () => void;
-        onSubmitError: undefined;
-      }
-    | {
-        key?: string;
-        functionParams: T;
-        onError: 'alert-submit';
-        onSuccess?: (data: any) => any;
-        onCancel?: (...args: any) => void;
-        onSubmitError: (data: any) => void;
-      };
-
   const abortControllers = useRef<Record<string, AbortController>>({});
   const abortReasons = useRef<Record<string, string | undefined>>({});
 
@@ -64,8 +47,9 @@ export const useEzQuery = <T extends any[]>(
     onSuccess,
     onSubmitError,
     onCancel,
-  }: TStartParams) => {
-    if (loading[key]) {
+    cancelOngoing = true,
+  }: TStartParams<ArgsType>) => {
+    if (loading[key] && cancelOngoing) {
       abortRequest('duplicate', key);
     } else {
       // eslint-disable-next-line no-undef
