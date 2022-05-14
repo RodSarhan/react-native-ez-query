@@ -2,7 +2,7 @@
 /* eslint-disable no-catch-shadow */
 import { useRef, useState } from 'react';
 import { Alert } from 'react-native';
-import type { TStartParams } from './types';
+import type { StartParams } from './types';
 // import { Alert } from 'react-native';
 
 export const useEzQuery = <ArgsType extends any[]>(
@@ -48,7 +48,7 @@ export const useEzQuery = <ArgsType extends any[]>(
     onSubmitError,
     onCancel,
     cancelOngoing = true,
-  }: TStartParams<ArgsType>) => {
+  }: StartParams<ArgsType>) => {
     if (loading[key] && cancelOngoing) {
       abortRequest('duplicate', key);
     } else {

@@ -3,9 +3,9 @@
 import { useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import type {
-  TCombinedResponse,
-  TFetchParams,
-  TUseFetchMultipleParams,
+  CombinedResponse,
+  FetchParams,
+  UseFetchMultipleParams,
 } from './types';
 // import { Alert } from 'react-native';
 
@@ -50,7 +50,7 @@ export const useFetcher = () => {
     onSubmitError,
     onCancel,
     cancelOngoing = true,
-  }: TFetchParams) => {
+  }: FetchParams) => {
     if (loading[key] && cancelOngoing) {
       abortRequest('duplicate', key);
     } else {
@@ -148,7 +148,7 @@ export const useFetcher = () => {
     onSuccess,
     onSubmitError,
     onCancel,
-  }: TUseFetchMultipleParams) => {
+  }: UseFetchMultipleParams) => {
     if (loading[key]) {
       abortRequest('duplicate', key);
     } else {
@@ -166,7 +166,7 @@ export const useFetcher = () => {
             reason: abortReasons.current[key],
           });
         }
-        let combinedResponse: TCombinedResponse = {};
+        let combinedResponse: CombinedResponse = {};
         const allCallbacks = Object.values(callbacks);
         Promise.all(
           allCallbacks.map(async (callback) => {

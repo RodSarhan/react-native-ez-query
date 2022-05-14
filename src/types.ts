@@ -1,8 +1,8 @@
-export type TCombinedResponse = {
+export type CombinedResponse = {
   [key: string]: any;
 };
 
-export type TStartParams<T> =
+export type StartParams<T> =
   | {
       key?: string;
       functionParams: T;
@@ -22,7 +22,7 @@ export type TStartParams<T> =
       cancelOngoing?: boolean;
     };
 
-export type TFetchParams =
+export type FetchParams =
   | {
       key: string;
       callback: (...args: any) => Promise<any>;
@@ -42,7 +42,7 @@ export type TFetchParams =
       cancelOngoing?: boolean;
     };
 
-export type TUseFetchMultipleParams =
+export type UseFetchMultipleParams =
   | {
       key?: string;
       callbacks: Record<
