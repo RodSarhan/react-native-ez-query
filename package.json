@@ -1,6 +1,6 @@
 {
   "name": "react-native-ez-query",
-  "version": "1.0.4",
+  "version": "1.1.0",
   "description": "React Native EZ Query helps adding stateful logic to your api calls such as loading state, success and error states, as well as easily canceling ongoing calls and chaining multiple async functions",
   "main": "lib/commonjs/index.js",
   "module": "lib/module/index.js",
@@ -112,7 +112,7 @@
         {
           "quoteProps": "consistent",
           "singleQuote": true,
-          "tabWidth": 2,
+          "tabWidth": 4,
           "trailingComma": "es5",
           "useTabs": false
         }
@@ -126,7 +126,7 @@
   "prettier": {
     "quoteProps": "consistent",
     "singleQuote": true,
-    "tabWidth": 2,
+    "tabWidth": 4,
     "trailingComma": "es5",
     "useTabs": false
   },
